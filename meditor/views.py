@@ -83,9 +83,18 @@ def upload_image(request):
                     'error': f'File too large: {file_size_mb:.1f}MB. Maximum size is {max_size_mb:.0f}MB.'
                 }, status=400)
             
-            # Generate unique filename with YYYY/MM/hash.png format
+            # Check if custom upload handler is configured
+            custom_upload_handler = getattr(settings, 'MEDITOR_UPLOAD_HANDLER', None)
+            if custom_upload_handler:
+                # Import and use custom upload handler
+                from django.utils.module_loading import import_string
+                handler = import_string(custom_upload_handler)
+                return handler(request, image_file)
+            
+            # Default upload behavior - save to media directory
             from datetime import datetime
             import hashlib
+            import os
             
             # Get current date for directory structure
             now = datetime.now()
@@ -96,7 +105,6 @@ def upload_image(request):
             file_hash = hashlib.md5(hash_input.encode()).hexdigest()[:8]
             
             # Get file extension
-            import os
             name, ext = os.path.splitext(image_file.name)
             if not ext:
                 ext = '.png'  # Default to .png if no extension
@@ -104,32 +112,13 @@ def upload_image(request):
             # Create filename: YYYY/MM/hash.ext
             filename = f"{year_month}/{file_hash}{ext}"
             
-            # Upload directly to CDN at root level (like ShareX)
-            import boto3
-            from TRDWLL.utils import get_env_variable
+            # Use Django's default storage
+            upload_path = getattr(settings, 'MEDITOR_UPLOAD_PATH', 'meditor/uploads/')
+            full_path = os.path.join(upload_path, filename)
             
-            # Initialize S3 client for direct upload
-            client = boto3.client(
-                "s3",
-                aws_access_key_id=get_env_variable('S3_ACCESS_KEY'),
-                aws_secret_access_key=get_env_variable('S3_SECRET_ACCESS_KEY'),
-                endpoint_url=get_env_variable('S3_ENDPOINT_URL')
-            )
-            
-            # Upload directly to CDN root: YYYY/MM/hash.ext
-            cdn_key = f"{year_month}/{file_hash}{ext}"
-            
-            client.put_object(
-                Bucket=get_env_variable('S3_BUCKET_NAME'),
-                Key=cdn_key,
-                Body=image_file.read(),
-                ContentType=image_file.content_type or 'image/png',
-                ACL="public-read",
-                CacheControl="public, max-age=31536000, immutable"
-            )
-            
-            # Generate direct CDN URL
-            url = f"https://{get_env_variable('S3_CUSTOM_DOMAIN')}/{cdn_key}"
+            # Save file using default storage
+            saved_path = default_storage.save(full_path, image_file)
+            url = default_storage.url(saved_path)
             
             return JsonResponse({
                 'success': True,

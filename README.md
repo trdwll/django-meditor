@@ -7,7 +7,7 @@ A Django app providing a rich markdown editor with HTML conversion and snippet m
 - **Rich Markdown Editor**: A powerful markdown editor with real-time preview
 - **HTML to Markdown Conversion**: Convert HTML content to markdown format
 - **Snippet Management**: Save and organize reusable markdown snippets
-- **Image Upload Support**: Drag and drop image upload functionality
+- **Image Upload Support**: Drag and drop image upload functionality with customizable handlers
 - **Generic Preview**: Preview markdown content for any Django model
 - **Customizable**: Easy to integrate and customize for your Django projects
 
@@ -18,10 +18,10 @@ A Django app providing a rich markdown editor with HTML conversion and snippet m
 
 ## Installation
 
-Install the package via git:
+Install the package via pip:
 
 ```bash
-pip install git+https://github.com/trdwll/django-meditor
+pip install django-meditor
 ```
 
 ## Quick Start
@@ -121,6 +121,52 @@ MEDITOR_CONFIG = {
     'ENABLE_SNIPPETS': True,  # Enable snippet functionality
     'ENABLE_HTML_CONVERSION': True,  # Enable HTML to markdown conversion
 }
+
+# Image upload settings
+EDITOR_MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20MB max file size
+
+# Custom upload handler (optional)
+MEDITOR_UPLOAD_HANDLER = 'your_app.upload_handlers.custom_upload_handler'
+MEDITOR_UPLOAD_PATH = 'meditor/uploads/'  # Fallback path
+```
+
+### Custom Upload Handlers
+
+You can create custom upload handlers for project-specific logic (e.g., S3, CDN uploads):
+
+```python
+# your_app/upload_handlers.py
+from django.http import JsonResponse
+from django.core.files.uploadedfile import UploadedFile
+
+def custom_upload_handler(request, image_file: UploadedFile) -> JsonResponse:
+    """
+    Custom upload handler for your project
+    Must return a JsonResponse with 'success', 'url', and 'filename' keys
+    """
+    try:
+        # Your custom upload logic here
+        # Example: Upload to S3, CDN, etc.
+        
+        uploaded_url = "https://your-cdn.com/path/to/image.jpg"
+        
+        return JsonResponse({
+            'success': True,
+            'url': uploaded_url,
+            'filename': image_file.name
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+```
+
+Then configure it in your settings:
+
+```python
+# settings.py
+MEDITOR_UPLOAD_HANDLER = 'your_app.upload_handlers.custom_upload_handler'
 ```
 
 ### Custom Widget
@@ -163,7 +209,7 @@ A model for storing reusable markdown snippets.
 
 - `HtmlToMarkdownView`: Converts HTML to markdown
 - `generic_preview`: Generic preview for any model
-- `upload_image`: Handles image uploads
+- `upload_image`: Handles image uploads (with custom handler support)
 - `snippets_list`: Lists user snippets
 - `save_snippet`: Saves a new snippet
 - `delete_snippet`: Deletes a snippet
@@ -172,4 +218,61 @@ A model for storing reusable markdown snippets.
 
 - `meditor_widget`: Renders the markdown editor widget
 - `markdown_to_html`: Converts markdown to HTML
+
+## Development
+
+### Installation for Development
+
+```bash
+git clone https://github.com/yourusername/django-meditor.git
+cd django-meditor
+pip install -e .
+pip install -e ".[dev]"
+```
+
+### Running Tests
+
+```bash
+pytest
+```
+
+### Code Quality
+
+```bash
+black .
+flake8 .
+isort .
+```
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Run the test suite
+6. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Changelog
+
+### 0.1.0 (2024-01-XX)
+- Initial release
+- Rich markdown editor with real-time preview
+- HTML to markdown conversion
+- Snippet management system
+- Image upload functionality with customizable handlers
+- Generic preview system
+
+## Roadmap
+
+- [ ] Image sizing controls
+- [ ] Content alignment options
+- [ ] Customizable HTML styling (Tailwind, Bootstrap support)
+- [ ] Revision history with local storage
+- [ ] Collaborative editing features
+- [ ] Advanced markdown extensions
 
