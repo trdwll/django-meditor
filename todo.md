@@ -1,0 +1,4 @@
+- image sizing
+- aligning content
+- settings for forming html (for example styling using tailwind or bootstrap etc)
+- storing revisions to allow reverting (local storage?)
