@@ -235,11 +235,20 @@ class RichMarkdownEditor {
         // Set initial state
         this.updatePasteToggleButton(pasteToggleBtn);
         
-        // Insert after the upload button
-        const uploadBtn = this.toolbar.querySelector('[data-action="upload_image"]');
-        if (uploadBtn) {
-            uploadBtn.parentNode.insertBefore(pasteToggleBtn, uploadBtn.nextSibling);
+        // Try to insert after upload button first, then image button, then at the end
+        let insertAfter = this.toolbar.querySelector('[data-action="upload_image"]') ||
+                         this.toolbar.querySelector('[data-action="image"]') ||
+                         this.toolbar.lastElementChild;
+        
+        if (insertAfter) {
+            insertAfter.parentNode.insertBefore(pasteToggleBtn, insertAfter.nextSibling);
+        } else {
+            // Fallback: just append to toolbar
+            this.toolbar.appendChild(pasteToggleBtn);
         }
+        
+        // Debug: log that button was added
+        console.log('Paste toggle button added to toolbar:', pasteToggleBtn);
         
         // Handle click
         pasteToggleBtn.addEventListener('click', () => {
