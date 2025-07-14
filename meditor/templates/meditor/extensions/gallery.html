@@ -1,0 +1,204 @@
+{% comment %}
+Gallery extension template
+Renders a responsive image gallery from markdown images
+{% endcomment %}
+
+<div class="markdown-gallery" data-image-count="{{ count }}">
+    {% if images %}
+        <div class="gallery-grid">
+            {% for image in images %}
+                <div class="gallery-item">
+                    <img src="{{ image.url }}" 
+                         alt="{{ image.alt }}" 
+                         loading="lazy"
+                         class="gallery-image"
+                         onclick="openGalleryModal('{{ image.url }}', '{{ image.alt }}')">
+                </div>
+            {% endfor %}
+        </div>
+        
+        {% if count > 1 %}
+            <div class="gallery-controls">
+                <button class="gallery-nav prev" onclick="navigateGallery(-1)">‹</button>
+                <span class="gallery-counter">1 / {{ count }}</span>
+                <button class="gallery-nav next" onclick="navigateGallery(1)">›</button>
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="gallery-empty">
+            <p>No images found in gallery</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.markdown-gallery {
+    margin: 2rem 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.gallery-item {
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.gallery-item:hover {
+    transform: scale(1.02);
+}
+
+.gallery-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: filter 0.2s ease;
+}
+
+.gallery-image:hover {
+    filter: brightness(1.1);
+}
+
+.gallery-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: #fff;
+    border-top: 1px solid #e9ecef;
+}
+
+.gallery-nav {
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    transition: background-color 0.2s ease;
+}
+
+.gallery-nav:hover {
+    background: #0056b3;
+}
+
+.gallery-counter {
+    font-weight: 500;
+    color: #6c757d;
+}
+
+.gallery-empty {
+    padding: 2rem;
+    text-align: center;
+    color: #6c757d;
+}
+</style>
+
+<script>
+let currentImageIndex = 0;
+const galleryImages = document.querySelectorAll('.gallery-image');
+
+function navigateGallery(direction) {
+    const totalImages = galleryImages.length;
+    currentImageIndex = (currentImageIndex + direction + totalImages) % totalImages;
+    
+    // Update counter
+    const counter = document.querySelector('.gallery-counter');
+    if (counter) {
+        counter.textContent = `${currentImageIndex + 1} / ${totalImages}`;
+    }
+    
+    // Highlight current image
+    galleryImages.forEach((img, index) => {
+        img.style.opacity = index === currentImageIndex ? '1' : '0.7';
+    });
+}
+
+function openGalleryModal(imageUrl, altText) {
+    // Create modal
+    const modal = document.createElement('div');
+    modal.className = 'gallery-modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <img src="${imageUrl}" alt="${altText}" class="modal-image">
+            <div class="modal-caption">${altText}</div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Close modal
+    const closeBtn = modal.querySelector('.close');
+    closeBtn.onclick = () => modal.remove();
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+    };
+}
+
+// Initialize gallery
+document.addEventListener('DOMContentLoaded', () => {
+    if (galleryImages.length > 0) {
+        navigateGallery(0);
+    }
+});
+</script>
+
+<style>
+.gallery-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    position: relative;
+    max-width: 90%;
+    max-height: 90%;
+}
+
+.modal-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+}
+
+.modal-caption {
+    position: absolute;
+    bottom: -40px;
+    left: 0;
+    color: white;
+    text-align: center;
+    width: 100%;
+}
+</style> 

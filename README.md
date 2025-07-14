@@ -8,6 +8,7 @@ A Django app providing a rich markdown editor with HTML conversion and snippet m
 - **HTML to Markdown Conversion**: Convert HTML content to markdown format
 - **Snippet Management**: Save and organize reusable markdown snippets
 - **Image Upload Support**: Drag and drop image upload functionality with customizable handlers
+- **Custom Extensions**: Configurable markdown extensions for custom HTML blocks
 - **Generic Preview**: Preview markdown content for any Django model
 - **Customizable**: Easy to integrate and customize for your Django projects
 
@@ -76,6 +77,18 @@ Include the editor in your templates:
 </form>
 ```
 
+### Markdown to HTML Conversion
+
+Use the template filter to convert markdown to HTML:
+
+```html
+{% load markdown_filters %}
+
+<div class="content">
+    {{ post.content|markdown_to_html }}
+</div>
+```
+
 ### HTML to Markdown Conversion
 
 Use the provided view to convert HTML to markdown:
@@ -128,6 +141,19 @@ EDITOR_MAX_IMAGE_SIZE = 20 * 1024 * 1024  # 20MB max file size
 # Custom upload handler (optional)
 MEDITOR_UPLOAD_HANDLER = 'your_app.upload_handlers.custom_upload_handler'
 MEDITOR_UPLOAD_PATH = 'meditor/uploads/'  # Fallback path
+
+# Custom Markdown Extensions (optional)
+MEDITOR_CUSTOM_EXTENSIONS = [
+    # Custom extension classes
+    'myapp.extensions.MyCustomExtension',
+    
+    # Or simple configuration
+    {
+        'pattern': r'\{\{myextension\}\}(.*?)\{\{/myextension\}\}',
+        'template': 'myapp/extensions/myextension.html',
+        'name': 'my_extension'
+    }
+]
 ```
 
 ### Custom Upload Handlers
@@ -169,20 +195,61 @@ Then configure it in your settings:
 MEDITOR_UPLOAD_HANDLER = 'your_app.upload_handlers.custom_upload_handler'
 ```
 
-### Custom Widget
+### Custom Markdown Extensions
 
-Use the custom widget in your forms:
+You can create custom extensions for special content blocks:
 
 ```python
-from django import forms
-from meditor.widgets import MarkdownEditorWidget
+# myapp/extensions.py
+from meditor.extensions import MarkdownExtension
+from typing import Dict, Any
 
-class MyModelForm(forms.ModelForm):
-    content = forms.CharField(widget=MarkdownEditorWidget())
+class MyCustomExtension(MarkdownExtension):
+    def __init__(self):
+        super().__init__(
+            pattern=r'\{\{myblock\}\}(.*?)\{\{/myblock\}\}',
+            template_name='myapp/extensions/myblock.html',
+            name='my_block'
+        )
     
-    class Meta:
-        model = MyModel
-        fields = ['title', 'content']
+    def extract_data(self, match) -> Dict[str, Any]:
+        content = match.group(1).strip()
+        return {'content': content, 'processed': content.upper()}
+```
+
+## Built-in Extensions
+
+The package includes several built-in extensions:
+
+### Gallery Extension
+```markdown
+{{gallery}}
+![Alt text 1](image1.jpg)
+![Alt text 2](image2.jpg)
+![Alt text 3](image3.jpg)
+{{/gallery}}
+```
+
+### Code Block Extension
+```markdown
+{{code:python}}
+def hello_world():
+    print("Hello, World!")
+{{/code}}
+```
+
+### Quote Extension
+```markdown
+{{quote:Albert Einstein}}
+Imagination is more important than knowledge.
+{{/quote}}
+```
+
+### Alert Extension
+```markdown
+{{alert:warning}}
+This is an important warning message.
+{{/alert}}
 ```
 
 ## API Reference
@@ -216,8 +283,9 @@ A model for storing reusable markdown snippets.
 
 ### Template Tags
 
+- `markdown_to_html`: Converts markdown to HTML with extensions
+- `markdown_reading_time`: Calculates reading time
 - `meditor_widget`: Renders the markdown editor widget
-- `markdown_to_html`: Converts markdown to HTML
 
 ## Development
 
@@ -265,7 +333,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - HTML to markdown conversion
 - Snippet management system
 - Image upload functionality with customizable handlers
+- Custom markdown extensions system
 - Generic preview system
+- Performance optimizations
 
 ## Roadmap
 

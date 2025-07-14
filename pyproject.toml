@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "django-meditor"
-version = "0.2.0"
+version = "0.3.0"
 description = "A Django app providing a rich markdown editor with HTML conversion and snippet management"
 readme = "README.md"
 license = {text = "MIT"}
