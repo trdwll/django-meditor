@@ -72,6 +72,14 @@ class RichMarkdownEditor {
     
     bindPasteEvents() {
         this.textarea.addEventListener('paste', (e) => {
+            // Check if paste formatting is disabled
+            const pasteFormattingDisabled = localStorage.getItem(`meditor_paste_formatting_${this.fieldName}`) === 'disabled';
+            
+            if (pasteFormattingDisabled) {
+                // Let default paste behavior happen
+                return;
+            }
+            
             const clipboardData = e.clipboardData || window.clipboardData;
             const pastedData = clipboardData.getData('text/html');
             const pastedText = clipboardData.getData('text/plain');
@@ -79,11 +87,18 @@ class RichMarkdownEditor {
             // Check if auto-convert HTML is enabled
             const autoConvertHtml = this.toolbar.dataset.autoConvertHtml !== 'false';
             
-            // Only auto-convert if explicitly enabled
+            // Handle different paste scenarios
             if (pastedData && pastedData.includes('<') && autoConvertHtml) {
+                // Convert HTML to markdown
                 e.preventDefault();
                 this.convertHtmlToMarkdown(pastedData);
+            } else if (pastedText && this.isMarkdownImage(pastedText.trim())) {
+                // Preserve markdown image syntax
+                e.preventDefault();
+                this.insertAtCursor(pastedText.trim());
+                this.showNotification('Markdown image preserved', 'success');
             } else if (pastedText && this.isUrl(pastedText.trim())) {
+                // Convert URL to link
                 e.preventDefault();
                 this.handleUrlPaste(pastedText.trim());
             }
@@ -112,6 +127,12 @@ class RichMarkdownEditor {
         ];
         
         return urlPatterns.some(pattern => pattern.test(text));
+    }
+    
+    isMarkdownImage(text) {
+        // Check if text is already markdown image syntax: ![alt](url)
+        const markdownImagePattern = /^!\[([^\]]*)\]\(([^)]+)\)$/;
+        return markdownImagePattern.test(text);
     }
     
     autoLinkUrl(url) {
@@ -163,6 +184,9 @@ class RichMarkdownEditor {
                 this.updateLivePreview();
             }
         });
+        
+        // Add paste formatting toggle button
+        this.setupPasteFormattingToggle();
     }
     
     setupImageUpload() {
@@ -198,6 +222,57 @@ class RichMarkdownEditor {
         
         // Setup drag and drop
         this.setupDragAndDrop();
+    }
+    
+    setupPasteFormattingToggle() {
+        // Add paste formatting toggle button
+        const pasteToggleBtn = document.createElement('button');
+        pasteToggleBtn.type = 'button';
+        pasteToggleBtn.className = 'toolbar-btn paste-toggle-btn';
+        pasteToggleBtn.dataset.action = 'toggle_paste_formatting';
+        pasteToggleBtn.title = 'Toggle Paste Formatting';
+        
+        // Set initial state
+        this.updatePasteToggleButton(pasteToggleBtn);
+        
+        // Insert after the upload button
+        const uploadBtn = this.toolbar.querySelector('[data-action="upload_image"]');
+        if (uploadBtn) {
+            uploadBtn.parentNode.insertBefore(pasteToggleBtn, uploadBtn.nextSibling);
+        }
+        
+        // Handle click
+        pasteToggleBtn.addEventListener('click', () => {
+            this.togglePasteFormatting(pasteToggleBtn);
+        });
+    }
+    
+    updatePasteToggleButton(button) {
+        const isDisabled = localStorage.getItem(`meditor_paste_formatting_${this.fieldName}`) === 'disabled';
+        
+        if (isDisabled) {
+            button.innerHTML = '📋❌';
+            button.title = 'Paste Formatting: OFF (Click to enable)';
+            button.classList.add('paste-disabled');
+        } else {
+            button.innerHTML = '📋✅';
+            button.title = 'Paste Formatting: ON (Click to disable)';
+            button.classList.remove('paste-disabled');
+        }
+    }
+    
+    togglePasteFormatting(button) {
+        const currentState = localStorage.getItem(`meditor_paste_formatting_${this.fieldName}`);
+        const newState = currentState === 'disabled' ? 'enabled' : 'disabled';
+        
+        localStorage.setItem(`meditor_paste_formatting_${this.fieldName}`, newState);
+        this.updatePasteToggleButton(button);
+        
+        const message = newState === 'disabled' 
+            ? 'Paste formatting disabled - raw paste mode' 
+            : 'Paste formatting enabled - smart paste mode';
+        
+        this.showNotification(message, 'info');
     }
     
     setupDragAndDrop() {
